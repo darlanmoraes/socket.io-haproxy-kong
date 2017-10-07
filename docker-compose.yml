@@ -1,0 +1,75 @@
+version: '2'
+services:
+  haproxy:
+    image: haproxy:1.7
+    mem_limit: "1024m"
+    ports:
+      - "80:80"
+    expose:
+      - "80"
+    volumes:
+      - ./haproxy:/usr/local/etc/haproxy
+    links:
+      - node-app-1
+      - node-app-2
+    depends_on: 
+      - kong-1
+      - kong-2
+  node-app-1:
+    build: .
+    working_dir: /app
+    links: 
+      - mongodb
+      - redis
+    depends_on: 
+      - mongodb
+      - redis
+  node-app-2:
+    build: .
+    working_dir: /app
+    links: 
+      - mongodb
+      - redis
+    depends_on:
+      - mongodb
+      - redis
+  kong-1:
+    build: ./kong
+    mem_limit: "1024m"
+    ports:
+      - "8010:8001"
+    environment:
+      KONG_PG_HOST: "kong_database"
+    expose:
+      - 7946
+      - 7946/udp
+    links: 
+      - kong_database
+    depends_on: 
+      - kong_database
+  kong-2:
+    build: ./kong
+    mem_limit: "1024m"
+    ports:
+      - "8020:8001"
+    environment:
+      KONG_PG_HOST: "kong_database"
+    expose:
+      - 7946
+      - 7946/udp
+    links: 
+      - kong_database
+    depends_on: 
+      - kong_database
+  kong_database:
+    image: "postgres:9.4"
+    mem_limit: "1024m"
+    environment:
+      POSTGRES_USER: "kong"
+      POSTGRES_DB: "kong"
+  mongodb:
+    image: "mongo:3.0.14"
+    mem_limit: 1024m
+  redis:
+    image: "redis:3.2.11"
+    mem_limit: 1024m
