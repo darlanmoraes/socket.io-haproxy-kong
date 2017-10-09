@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 services:
   haproxy:
     image: haproxy:1.7
@@ -10,66 +10,102 @@ services:
     volumes:
       - ./haproxy:/usr/local/etc/haproxy
     links:
-      - node-app-1
-      - node-app-2
-    depends_on: 
       - kong-1
       - kong-2
+    depends_on: 
+      kong-1:
+        condition: service_healthy
+      kong-2:
+        condition: service_healthy
   node-app-1:
     build: .
     working_dir: /app
     links: 
-      - mongodb
+      - mongo
       - redis
     depends_on: 
-      - mongodb
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget http://localhost:3000/status -O /dev/null || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   node-app-2:
     build: .
     working_dir: /app
     links: 
-      - mongodb
+      - mongo
       - redis
     depends_on:
-      - mongodb
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget http://localhost:3000/status -O /dev/null || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   kong-1:
     build: ./kong
     mem_limit: "1024m"
     ports:
       - "8010:8001"
     environment:
-      KONG_PG_HOST: "kong_database"
+      KONG_PG_HOST: "kong-database"
     expose:
       - 7946
       - 7946/udp
     links: 
-      - kong_database
-    depends_on: 
-      - kong_database
+      - kong-database
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      node-app-1:
+        condition: service_healthy
+      node-app-2:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -I -s -L http://localhost:8000 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   kong-2:
     build: ./kong
     mem_limit: "1024m"
     ports:
       - "8020:8001"
     environment:
-      KONG_PG_HOST: "kong_database"
+      KONG_PG_HOST: "kong-database"
     expose:
       - 7946
       - 7946/udp
     links: 
-      - kong_database
-    depends_on: 
-      - kong_database
-  kong_database:
-    image: "postgres:9.4"
+      - kong-database
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      node-app-1:
+        condition: service_healthy
+      node-app-2:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -I -s -L http://localhost:8000 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  kong-database:
+    image: "healthcheck/postgres"
     mem_limit: "1024m"
     environment:
       POSTGRES_USER: "kong"
       POSTGRES_DB: "kong"
-  mongodb:
-    image: "mongo:3.0.14"
+  mongo:
+    image: "healthcheck/mongo"
     mem_limit: 1024m
   redis:
-    image: "redis:3.2.11"
+    image: "healthcheck/redis"
     mem_limit: 1024m

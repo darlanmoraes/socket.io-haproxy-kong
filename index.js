@@ -7,9 +7,17 @@ const socket = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
 const redis = require('socket.io-redis');
+const cluster = require('cluster');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  const host = req.headers.host;
+  const worker = cluster.worker.id;
+  console.log(`Request received. HOST[${host}], WORKER[${worker}]`);
+  next();
+});
 
 app.get([ '/rooma', '/roomb' ], (req, res) => {
   return res.sendFile(path.join(__dirname, 'public/index.html'));
@@ -50,12 +58,16 @@ app.get('/messages', (req, res) => {
     });
 });
 
+app.get('/status', (req, res) => {
+  res.sendStatus(200);
+});
+
 if (!sticky.listen(server, 3000)) {
   server.once('listening', () => {
     console.log(`Server started on port: 3000`);
   });
 } else {
-  mongoose.connect('mongodb://mongodb:27017/db', { useMongoClient: true });
+  mongoose.connect('mongodb://mongo:27017/db', { useMongoClient: true });
   const db = mongoose.connection;
   db.once('open', function() {
     console.log('Connected to MongoDB');
