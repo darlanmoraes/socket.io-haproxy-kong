@@ -11,7 +11,7 @@ I've included a simple chat that can be accessed through browser to demonstrate 
 # Architecture
 The following diagram shows how the infraestructure was built. Everything can be found inside the file ```docker-compose.yml```.
 
-![Screenshot](Socket IO.png)
+![alt tag](Socket%20IO.png)
 
 # How Can I Run?
 Please follow the next steps to get ir working. First of all, be sure that you have all the recquirements:
